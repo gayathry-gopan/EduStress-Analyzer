@@ -1,1 +1,3 @@
-# Student-Stress-Level-and-Academic-Grade-Prediction-using-Machine-Learning
+This is a machine learning–based model designed to predict student stress levels and estimate their academic grades based on behavioral, physiological, and academic factors. The system leverages supervised learning algorithms to analyze input features such as study hours, sleep patterns, social engagement, and performance metrics, identifying patterns that influence stress and academic outcomes.
+
+The goal of this project is to assist educators, counselors, and institutions in understanding student well-being, providing early interventions, and promoting better mental health and academic performance.# Student-Stress-Level-and-Academic-Grade-Prediction-using-Machine-Learning
