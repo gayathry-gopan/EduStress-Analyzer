@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # CONFIGURATION
 # =======================
 STRESS_MODEL_FILE = "xgb_stress_model.json"
-ARTIFACTS_FILE = "stress_grade_artifacts.pkl"
+ARTIFACTS_FILE = "models/stress_grade_artifacts.pkl"
 GRADE_ENCODER_FILE = "grade_label_encoder.pkl"
 FEATURE_NAMES_STRESS_FILE = "feature_names_stress.pkl"
 STRESS_SCALER_FILE = "scaler_stress.pkl"
@@ -204,3 +204,4 @@ if submitted:
     - Grade **{predicted_grade_alpha}** based on your total score ({total}).
     - Stress Level **{predicted_stress}** predicted from academic and lifestyle factors.
     """)
+
