@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Streamlit App for Stress & Grade Prediction (Rule-based Grade + ML Stress)"""
+"""Streamlit App for Stress & Grade Prediction (Rule-based Grade + ML Stress + Smart Recommendations)"""
 
 import streamlit as st
 import pandas as pd
@@ -15,10 +15,10 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # CONFIGURATION
 # =======================
 STRESS_MODEL_FILE = "xgb_stress_model.json"
-ARTIFACTS_FILE = "models/stress_grade_artifacts.pkl"
-GRADE_ENCODER_FILE = "models/grade_label_encoder.pkl"
-FEATURE_NAMES_STRESS_FILE = "models/feature_names_stress.pkl"
-STRESS_SCALER_FILE = "models/scaler_stress.pkl"
+ARTIFACTS_FILE = "stress_grade_artifacts.pkl"
+GRADE_ENCODER_FILE = "grade_label_encoder.pkl"
+FEATURE_NAMES_STRESS_FILE = "feature_names_stress.pkl"
+STRESS_SCALER_FILE = "scaler_stress.pkl"
 
 # =======================
 # LOAD MODELS AND ARTIFACTS
@@ -107,11 +107,43 @@ def assign_grade(score):
 
 
 # =======================
+# RECOMMENDATION ENGINE
+# =======================
+def generate_recommendation(stress_level, grade, total_score):
+    """Generate natural-language recommendations based on stress level and performance"""
+    if stress_level == "Low":
+        rec = f"""
+        🌿 You’re maintaining a **healthy balance**, {grade}-grade achiever!  
+        Keep your momentum going — your total score of **{total_score:.2f}** shows great consistency.  
+        💡 *Recommendation:* Keep regular study habits, stay active in extracurriculars, and continue taking short breaks to maintain your calm energy.  
+        """
+    elif stress_level == "Medium":
+        rec = f"""
+        ⚖️ You're doing well academically (Grade: **{grade}**, Score: **{total_score:.2f}**) but showing moderate stress levels.  
+        It’s time to fine-tune your routine.  
+        💡 *Recommendation:*  
+        - Try scheduling your study blocks with relaxation breaks.  
+        - Sleep at least 7 hours per night and stay hydrated.  
+        - Light exercises or meditation can help you focus better.  
+        """
+    else:  # High Stress
+        rec = f"""
+        🚨 Your stress level is **high**, and while your grade ({grade}) and score ({total_score:.2f}) show effort, you might be overexerting yourself.  
+        🧠 *Recommendation:*  
+        - Take a short break from intense workloads and focus on self-care.  
+        - Talk to a mentor or counselor if you're feeling overwhelmed.  
+        - Break big goals into smaller, achievable milestones.  
+        - Remember: your well-being matters more than any single grade.  
+        """
+    return rec
+
+
+# =======================
 # STREAMLIT UI
 # =======================
-st.set_page_config(page_title="🎓 Stress & Grade Predictor", layout="centered")
+st.set_page_config(page_title="🎓 EduStress Analyzer", layout="centered")
 st.title("🎓 EduStress Analyzer")
-st.write("Predict a student's **Grade** and **Stress Level** based on details.")
+st.write("Predict a student's **Grade**, **Stress Level**, and receive **Personalized Recommendations** for improvement.")
 st.markdown("---")
 
 try:
@@ -137,24 +169,27 @@ with st.form("prediction_form"):
         attendance = st.slider("Attendance (%)", 50.0, 100.0, 90.0, 0.1)
         midterm = st.slider("Midterm Score", 0.0, 100.0, 75.0, 0.1)
         final = st.slider("Final Score", 0.0, 100.0, 80.0, 0.1)
-        total = st.slider("Total Score", 0.0, 100.0, 78.0, 0.1)
 
     with col3:
         assignments = st.slider("Assignments Avg", 0.0, 100.0, 85.0, 0.1)
         quizzes = st.slider("Quizzes Avg", 0.0, 100.0, 70.0, 0.1)
-        participation = st.slider("Participation Score", 0.0, 100.0, 90.0, 0.1)
         projects = st.slider("Projects Score", 0.0, 100.0, 88.0, 0.1)
-        extracurricular = st.selectbox("Extracurricular Activities", ["Yes", "No"])
         internet = st.selectbox("Internet Access at Home", ["Yes", "No"])
-        parent_edu = st.selectbox("Parent Education Level", ["High School", "Associate's Degree", "Bachelor's", "Master's", "PhD", "Unknown/Not Disclosed"])
-        income = st.selectbox("Family Income Level", ["Low", "Medium", "High"])
-
-    submitted = st.form_submit_button("🔍 Predict Grade & Stress")
+    submitted = st.form_submit_button("🔍 Predict")
 
 # =======================
 # PREDICTION LOGIC
 # =======================
 if submitted:
+    # --- 1️⃣ Compute Total Score ---
+    total = (
+        midterm * 0.3 +
+        final * 0.4 +
+        assignments * 0.1 +
+        quizzes * 0.1 +
+        projects * 0.1
+    )
+
     input_data = {
         "Gender": [gender],
         "Age": [age],
@@ -164,33 +199,33 @@ if submitted:
         "Final_Score": [final],
         "Assignments_Avg": [assignments],
         "Quizzes_Avg": [quizzes],
-        "Participation_Score": [participation],
         "Projects_Score": [projects],
         "Total_Score": [total],
         "Study_Hours_per_Week": [study_hours],
-        "Extracurricular_Activities": [extracurricular],
         "Internet_Access_at_Home": [internet],
-        "Parent_Education_Level": [parent_edu],
-        "Family_Income_Level": [income],
         "Sleep_Hours_per_Night": [sleep_hours],
     }
 
     input_df = pd.DataFrame(input_data)
 
-    # --- 1️⃣ Predict Grade using rules ---
+    # --- 2️⃣ Predict Grade using rule ---
     predicted_grade_alpha = assign_grade(total)
     grade_encoded = le_grade.transform([predicted_grade_alpha])[0]
     input_df["Predicted_Grade"] = grade_encoded
 
-    # --- 2️⃣ Predict Stress ---
+    # --- 3️⃣ Predict Stress using ML Model ---
     processed_stress = preprocess_input(input_df, feature_names_stress, scaler_stress, encoders)
     pred_stress_encoded = stress_model.predict(processed_stress)
     predicted_stress = le_target.inverse_transform(pred_stress_encoded)[0]
 
-    # --- Display Results ---
+    # --- 4️⃣ Generate Recommendation ---
+    recommendation_text = generate_recommendation(predicted_stress, predicted_grade_alpha, total)
+
+    # --- 5️⃣ Display Results ---
     st.markdown("---")
     st.subheader("📊 Prediction Results")
     st.success(f"🎓 **Predicted Grade:** {predicted_grade_alpha}")
+    st.info(f"📈 **Computed Total Score:** {total:.2f}")
 
     if predicted_stress == "High":
         st.error(f"🧠 **Predicted Stress Level:** {predicted_stress} 😥")
@@ -199,10 +234,5 @@ if submitted:
     else:
         st.success(f"🧠 **Predicted Stress Level:** {predicted_stress} 😊")
 
-    st.markdown(f"""
-    **Interpretation:**
-    - Grade **{predicted_grade_alpha}** based on your total score ({total}).
-    - Stress Level **{predicted_stress}** predicted from academic and lifestyle factors.
-    """)
-
-
+    st.markdown("### 💬 Personalized Recommendation")
+    st.markdown(recommendation_text)
